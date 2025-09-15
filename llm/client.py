@@ -2,7 +2,7 @@ import os
 from typing import List, Dict, Optional
 from openai import OpenAI
 
-
+# 这个可能需要重构为chatOpenAI
 class DeepSeekClient:
     def __init__(self, api_base: str, api_key: str, default_model: str = "DeepSeek-V3") -> None:
         if not api_base or not api_key:

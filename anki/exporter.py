@@ -4,17 +4,18 @@ import genanki
 
 from .templates import basic_model, cloze_model
 
-
+# 获取对象的键对应的值，如果对象没有键则返回空字符串
 def _get(card: Any, key: str, default: str = "") -> Any:
     if isinstance(card, dict):
         return card.get(key, default)
     return getattr(card, key, default)
 
-
+# 把任意字段规范成字符串，列表会用,连接。常用于将 Question/Answer/Tags/Evidence 等转成字符串字段供 genanki 使用。
 def _as_text(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, list):
+        # 把**可迭代对象**里的元素用指定字符串（这里叫分隔符）拼接成一个新字符串。
         return ", ".join(str(v) for v in value)
     return str(value)
 

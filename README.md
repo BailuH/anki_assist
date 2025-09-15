@@ -54,7 +54,7 @@ DEEPSEEK_API_KEY=替换为你的Key
 
 ### 5) 启动应用
 ```powershell
-uv run -p .venv streamlit run app/streamlit_app.py --server.port 8501
+.venv\Scripts\python -m streamlit run app/streamlit_app.py --server.port 8501
 ```
 - 打开浏览器访问：`http://localhost:8501`
 - 注意：Windows 不要在命令后面追加 `| cat`（该命令在 Windows 上不可用）

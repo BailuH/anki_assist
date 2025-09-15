@@ -1,58 +1,95 @@
 import os
 import io
 import json
+#解析时间用于牌组的名称
 from datetime import datetime
 import streamlit as st
+from streamlit_tags import st_tags
 from dotenv import load_dotenv
 
-# Ensure project root on sys.path
+# sys库用于与python解释器交互，提供了若干“系统级的方法接口”
+# 这段代码的目的是要
 import sys
+#获取当前streamlit app的绝对路径，“..”代表上一级目录
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+# 将当前文件搜索路径设置为优先级最高
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from pipeline.graph import run_pipeline
 from anki.exporter import export_to_apkg
 
-load_dotenv(override=True)
+load_dotenv(override=True) #override参数决定是否覆盖同名变量
 
+
+#=================================================================================================================================
+
+# 1.页面元信息（必须在生成其他 Streamlit 元素之前调用），layout="wide" 让页面横向更宽
 st.set_page_config(page_title="法律文档→Anki", layout="wide")
 
+# 初始化session_state用于保存图运行结果和用户是否保留
 if "pipeline_output" not in st.session_state:
     st.session_state.pipeline_output = None
 if "cards_selected" not in st.session_state:
     st.session_state.cards_selected = {}
 
+#=================================================================================================================================
+
+# 2.标题文字与标题说明
 st.title("法律文档制卡助手")
 st.caption("上传法条/司法解释/案例原文，基于原文做结构化抽取与制卡，一键导出 .apkg")
 
+#=================================================================================================================================
+
+# 3.侧栏填写用于填写相关配置信息
 with st.sidebar:
+    # 分级标题
     st.header("模型与API配置")
+    #文本输入，先从操作系统抓取环境变量，如果无返回空字符串（text_input接口要求）
+    #用户也可以清空输入框自己输入
     base_url = st.text_input("Base URL", os.getenv("DEEPSEEK_BASE_URL", ""), placeholder="https://api.deepseek.com/v1")
     api_key = st.text_input("API Key", os.getenv("DEEPSEEK_API_KEY", ""), type="password")
+    #单选框
     extract_model = st.selectbox("抽取模型", ["DeepSeek-V3", "DeepSeek-R1"], index=0)
     card_model = st.selectbox("制卡模型", ["DeepSeek-V3", "DeepSeek-R1"], index=0)
+    #分割线    
     st.divider()
+    #分级子标题
     st.subheader("质量与去重")
+    #滑动条 
     dedup_threshold = st.slider("去重相似度阈值", 0.5, 0.99, 0.88, 0.01, help="相似度≥阈值判为重复")
-    min_quality = st.slider("最低质量分", 0.0, 1.0, 0.30, 0.01, help="低于该分数的卡片会被过滤；可先降到0.3再观察")
+    min_quality = st.slider("最低质量分", 0.0, 1.0, 0.30, 0.01, help="为了保证卡片质量，低于该分数的卡片会被过滤")
+    #数字框
     max_cards_per_item = st.number_input("每个知识点最多卡片数", 1, 5, 3, 1)
+#=================================================================================================================================
+#主页面布置
 
 st.subheader("Step 1 - 上传文档 & 关键词")
+# 上传文件
 uploaded_files = st.file_uploader("支持 docx/pdf/txt，多文件可选", type=["pdf", "docx", "txt"], accept_multiple_files=True)
-keywords_input = st.text_area("关键词（换行/逗号分隔）", value="反不当竞争")
-keywords = [k.strip() for part in keywords_input.split("\n") for k in part.split(",") if k.strip()]
 
-col1, col2 = st.columns(2)
+# 标签交互式添加关键词，返回一个列表
+keywords = st_tags(
+    label='关键词',
+    text='回车添加',
+    value=['反不当竞争'],      # 默认值
+    suggestions=['反垄断', '商业秘密']  # 智能补全
+)
+
+# 设置两列
+col1, col2 = st.columns(2) 
+# 上下文写法，按钮设置，每次点击按钮会触发重新运行脚本 
 with col1:
     run_btn = st.button("运行抽取与制卡", type="primary")
 with col2:
     reset_btn = st.button("重置")
+#=================================================================================================================================
+# 第一步运行管线时的判断逻辑与数据流
 
 if reset_btn:
     st.session_state.pipeline_output = None
     st.session_state.cards_selected = {}
-    st.experimental_rerun()
+    st.rerun()
 
 if run_btn:
     if not uploaded_files:
@@ -62,12 +99,16 @@ if run_btn:
     else:
         # 将上传的文件保存到 data/uploads
         os.makedirs("data/uploads", exist_ok=True)
+        # 保存上传文件的绝对路径/相对路径，便于后续代码需要
         saved_paths = []
+        # 将文件路径拼接后写入指定路径并保存（会覆盖同名文件）
         for uf in uploaded_files:
             save_path = os.path.join("data", "uploads", uf.name)
             with open(save_path, "wb") as f:
                 f.write(uf.getbuffer())
             saved_paths.append(save_path)
+
+        #信息反馈：配合with形成旋转加载效果
         with st.spinner("运行管线中，请稍候…"):
             try:
                 output = run_pipeline(
@@ -86,9 +127,12 @@ if run_btn:
         st.session_state.pipeline_output = output
 
 output = st.session_state.pipeline_output
+#=================================================================================================================================
+# 第二步运行判断逻辑
 
 st.subheader("Step 2 - 抽取结果与卡片预览（可勾选导出）")
 if not output:
+    # 信息反馈：彩色提示框
     st.info("请先上传文档并点击运行")
 else:
     docs = output.get("documents", [])
@@ -99,24 +143,34 @@ else:
     if errors:
         for err in errors:
             st.error(err)
-
+    
+    # 可折叠/展开的容器组件
     with st.expander("抽取结果（结构化）", expanded=False):
+        # 能先将python对象如list，dict等转为json格式，再用美化界面展示
         st.json({"documents": docs, "items": items[:50]})
 
     st.write(f"生成卡片数：{len(cards)}（根据阈值过滤后）")
 
-    # 复核与选择
-    for idx, card in enumerate(cards):
+    # 卡片列表渲染（复核并选择）
+    for idx, card in enumerate(cards): # 将序列类型打上“下标”
         card_id = f"card_{idx}"
         include_default = True
         quality = card.get("quality", 0)
+        # 切分三列的比例
         cols = st.columns([0.08, 0.57, 0.35])
+
         with cols[0]:
+            # 展示界面为打勾框，并对streamlit_state的字典进行更新
+            # checkbox的特性有返回值为bool型，状态持久（对key唯一标识进行赋值）、触发重跑
             st.session_state.cards_selected[card_id] = st.checkbox("选择", value=include_default, key=card_id)
+            
         with cols[1]:
+            # 展示markdown
             st.markdown(f"**Q**: {card.get('Question','')}")
             st.markdown(f"**A**: {card.get('Answer','')}")
+
         with cols[2]:
+            #小号文字，颜色更淡，用于写补充性的文字
             st.caption(f"来源：{card.get('SourceDoc','')}（{card.get('SourceLoc','')}）")
             st.caption(f"标签：{', '.join(card.get('Tags', []))}")
             st.caption(f"难度：{card.get('Difficulty', 'N/A')}  质量分：{quality:.2f}")
