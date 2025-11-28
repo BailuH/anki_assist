@@ -1,0 +1,41 @@
+[project]
+name = "anki-assist"
+version = "0.1.0"
+description = "法律文档 → Anki 闪卡助手"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "streamlit>=1.37.0",
+    "langgraph>=0.2.16",
+    "pydantic>=2.8.2",
+    "openai>=1.46.0",
+    "httpx>=0.27.0",
+    "genanki>=0.13.1",
+    "python-docx>=1.1.2",
+    "pymupdf>=1.24.9",
+    "rapidfuzz>=3.9.6",
+    "numpy>=1.26.4",
+    "pandas>=2.2.2",
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true

@@ -6,6 +6,7 @@ from datetime import datetime
 import streamlit as st
 from streamlit_tags import st_tags
 from dotenv import load_dotenv
+from models.schemas import PipelineInput
 
 # sys库用于与python解释器交互，提供了若干“系统级的方法接口”
 # 这段代码的目的是要
@@ -111,17 +112,22 @@ if run_btn:
         #信息反馈：配合with形成旋转加载效果
         with st.spinner("运行管线中，请稍候…"):
             try:
-                output = run_pipeline(
-                    file_paths=saved_paths,
-                    keywords=keywords,
-                    api_base=base_url,
-                    api_key=api_key,
-                    extract_model=extract_model,
-                    card_model=card_model,
-                    dedup_threshold=dedup_threshold,
-                    min_quality=min_quality,
-                    max_cards_per_item=int(max_cards_per_item),
-                )
+                input = PipelineInput(file_paths= saved_paths,
+                                      keywords=keywords,
+                                      api_base=base_url,
+                                      api_key=api_key,
+                                      extract_model=extract_model,
+                                      card_model=card_model,
+                                      dedup_threshold=dedup_threshold,
+                                      min_quality=min_quality,
+                                      max_cards_per_item=int(max_cards_per_item))
+                
+                thread_config = {
+                    "configurable": {
+                        "thread_id": "1001"
+                }
+}
+                output = run_pipeline.invoke(input, config = thread_config)
             except Exception as e:
                 output = {"documents": [], "extracted_items": [], "cards": [], "errors": [f"运行失败: {e}"]}
         st.session_state.pipeline_output = output
@@ -135,10 +141,10 @@ if not output:
     # 信息反馈：彩色提示框
     st.info("请先上传文档并点击运行")
 else:
-    docs = output.get("documents", [])
-    items = output.get("extracted_items", [])
-    cards = output.get("cards", [])
-    errors = output.get("errors", [])
+    docs = output.documents
+    items = output.extracted_items
+    cards = output.cards
+    errors = output.errors
 
     if errors:
         for err in errors:
@@ -151,13 +157,15 @@ else:
 
     st.write(f"生成卡片数：{len(cards)}（根据阈值过滤后）")
 
-    # 卡片列表渲染（复核并选择）
+    # 卡片列表渲染（复核并选择）- 增强版，支持LLM归纳展示和用户确认
+    st.info("💡 新功能：系统现在使用LLM智慧归纳生成卡片，您可以查看归纳过程并确认最终内容")
+    
     for idx, card in enumerate(cards): # 将序列类型打上“下标”
         card_id = f"card_{idx}"
         include_default = True
-        quality = card.get("quality", 0)
-        # 切分三列的比例
-        cols = st.columns([0.08, 0.57, 0.35])
+        quality = card.quality
+        # 切分三列的比例 - 调整为更好的布局
+        cols = st.columns([0.1, 0.5, 0.4])
 
         with cols[0]:
             # 展示界面为打勾框，并对streamlit_state的字典进行更新
@@ -166,29 +174,58 @@ else:
             
         with cols[1]:
             # 展示markdown
-            st.markdown(f"**Q**: {card.get('Question','')}")
-            st.markdown(f"**A**: {card.get('Answer','')}")
-
+            st.markdown(f"**Q**: {card.Question}")
+            st.markdown(f"**A**: {card.Answer}")
+            
+            # 显示LLM归纳过程（如果有）
+            if hasattr(card, 'llm_induction') and card.llm_induction:
+                with st.expander("🧠 LLM归纳过程"):
+                    st.write(card.llm_induction)
+            
         with cols[2]:
             #小号文字，颜色更淡，用于写补充性的文字
-            st.caption(f"来源：{card.get('SourceDoc','')}（{card.get('SourceLoc','')}）")
-            st.caption(f"标签：{', '.join(card.get('Tags', []))}")
-            st.caption(f"难度：{card.get('Difficulty', 'N/A')}  质量分：{quality:.2f}")
+            st.caption(f"来源：{card.SourceDoc}（{card.SourceLoc}）")
+            st.caption(f"标签：{', '.join(card.Tags)}")
+            st.caption(f"难度：{card.Difficulty}  质量分：{quality:.2f}")
+            
+            # 显示归纳提示版本（如果有）
+            if hasattr(card, 'induction_prompt') and card.induction_prompt:
+                st.caption(f"归纳方式: {card.induction_prompt}")
+            
             with st.expander("证据片段"):
-                st.write(card.get("Evidence", ""))
+                st.write(card.Evidence)
         st.divider()
 
     exportable = [c for i, c in enumerate(cards) if st.session_state.cards_selected.get(f"card_{i}")]
 
     st.subheader("Step 3 - 导出 .apkg")
     deck_name = st.text_input("Deck 名称", value=f"Law-Notes-{datetime.now().strftime('%Y%m%d-%H%M')}")
-    if st.button("导出 Anki 包"):
-        if not exportable:
-            st.warning("请至少选择一张卡片")
-        else:
-            os.makedirs("exports", exist_ok=True)
-            apkg_path = export_to_apkg(deck_name=deck_name, cards=exportable, output_dir="exports")
-            with open(apkg_path, "rb") as f:
-                data = f.read()
-            st.success(f"已导出：{apkg_path}")
-            st.download_button("下载 .apkg", data=data, file_name=os.path.basename(apkg_path), mime="application/octet-stream")
+    
+    # 添加导出前确认机制
+    if len(exportable) > 0:
+        st.info(f"已选择 {len(exportable)} 张卡片准备导出")
+        
+        # 显示即将导出的卡片预览
+        with st.expander("预览即将导出的卡片"):
+            for card in exportable[:5]:  # 显示前5张
+                st.markdown(f"**Q**: {card.Question}")
+                st.markdown(f"**A**: {card.Answer}")
+                st.markdown("---")
+            if len(exportable) > 5:
+                st.caption(f"... 还有 {len(exportable) - 5} 张卡片")
+        
+        # 确认复选框
+        confirm_export = st.checkbox("我已确认上述卡片内容准确无误，准备导出", key="confirm_export")
+        
+        if st.button("导出 Anki 包", disabled=not confirm_export):
+            if not confirm_export:
+                st.warning("请先确认卡片内容无误")
+            else:
+                os.makedirs("exports", exist_ok=True)
+                apkg_path = export_to_apkg(deck_name=deck_name, cards=exportable, output_dir="exports")
+                with open(apkg_path, "rb") as f:
+                    data = f.read()
+                st.success(f"已导出：{apkg_path}")
+                st.download_button("下载 .apkg", data=data, file_name=os.path.basename(apkg_path), mime="application/octet-stream")
+    else:
+        st.warning("请至少选择一张卡片")
