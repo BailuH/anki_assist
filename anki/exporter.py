@@ -68,18 +68,38 @@ def export_to_apkg(deck_name: str, cards: List[Any], output_dir: str = "exports"
                 ],
             )
         else:
-            note = genanki.Note(
-                model=basic,
-                fields=[
-                    _as_text(_get(c, "Question", "")),
-                    _as_text(_get(c, "Answer", "")),
-                    _as_text(_get(c, "SourceDoc", "")),
-                    _as_text(_get(c, "SourceLoc", "")),
-                    tags_html,
-                    diff_html,
-                    _as_text(_get(c, "Evidence", "")),
-                ],
-            )
+            # 根据卡片类型选择合适的模板
+            card_type = _get(c, "CardType", "qa")
+            if "memory" in card_type.lower() or "背诵" in _get(c, "Question", ""):
+                # 使用背诵记忆模板
+                note = genanki.Note(
+                    model=basic,
+                    fields=[
+                        _as_text(_get(c, "Question", "")),
+                        _as_text(_get(c, "Answer", "")),
+                        _as_text(_get(c, "SourceDoc", "")),
+                        _as_text(_get(c, "SourceLoc", "")),
+                        tags_html,
+                        diff_html,
+                        _as_text(_get(c, "Evidence", "")),
+                        "memory",  # CardType字段
+                    ],
+                )
+            else:
+                # 使用知识问答模板
+                note = genanki.Note(
+                    model=basic,
+                    fields=[
+                        _as_text(_get(c, "Question", "")),
+                        _as_text(_get(c, "Answer", "")),
+                        _as_text(_get(c, "SourceDoc", "")),
+                        _as_text(_get(c, "SourceLoc", "")),
+                        tags_html,
+                        diff_html,
+                        _as_text(_get(c, "Evidence", "")),
+                        "qa",  # CardType字段
+                    ],
+                )
         deck.add_note(note)
 
     pkg = genanki.Package(deck)

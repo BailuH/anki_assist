@@ -2,7 +2,7 @@
 
 一个本地运行的智能法律学习工具：上传法律相关文档（docx/pdf/txt）→ **LLM智慧归纳** → 一键导出 `.apkg` 直接导入官方 Anki。
 
-## ✨ 新增核心功能（2024优化版）
+## ✨ 新增核心功能（2025.11.28优化）
 
 ### 🤖 LLM智慧归纳
 - **智能理解**: 大模型对法律知识点进行深度理解和归纳总结
@@ -48,7 +48,7 @@ uv pip install -r requirements.txt -p .venv
 ### 配置示例
 ```ini
 # .env 文件（放在项目根目录）
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_BASE_URL=https://openapi.coreshub.cn/v1
 DEEPSEEK_API_KEY=替换为你的Key
 ```
 

@@ -84,7 +84,7 @@ def extract_from_documents(documents: List[Document], keywords: List[str], clien
                         continue
         
         # 策略2：对结果较少的文档进行语义理解补充
-        if len(traditional_items) < len(keywords) * 2:  # 如果结果较少
+        if len(traditional_items) < len(keywords) * 5:  # 如果结果较少
             # 按文档分别进行语义理解，避免上下文过长
             for doc in documents:
                 if len(doc.text) < 8000:  # 只处理较短的文档
