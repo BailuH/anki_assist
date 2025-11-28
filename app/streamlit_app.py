@@ -48,7 +48,7 @@ with st.sidebar:
     st.header("模型与API配置")
     #文本输入，先从操作系统抓取环境变量，如果无返回空字符串（text_input接口要求）
     #用户也可以清空输入框自己输入
-    base_url = st.text_input("Base URL", os.getenv("DEEPSEEK_BASE_URL", ""), placeholder="https://api.deepseek.com/v1")
+    base_url = st.text_input("Base URL", os.getenv("DEEPSEEK_BASE_URL", ""), placeholder="https://openapi.coreshub.cn/v1")
     api_key = st.text_input("API Key", os.getenv("DEEPSEEK_API_KEY", ""), type="password")
     #单选框
     extract_model = st.selectbox("抽取模型", ["DeepSeek-V3", "DeepSeek-R1"], index=0)
