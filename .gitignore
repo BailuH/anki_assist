@@ -1,7 +1,6 @@
-# Project specific - 隐藏数据文件夹
+# Project specific - 隐藏数据文件夹（但保留image用于README显示）
 data/
 exports/
-image/
 
 # Python
 __pycache__/
