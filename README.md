@@ -35,7 +35,7 @@ AI智能识别法律文档内容，基于语义理解抽取关键知识点，支
 ## 🚀 快速开始
 
 ### 环境要求
-- Python 3.8+
+- Python 3.9+
 - Windows/MacOS/Linux
 
 ### 安装步骤
@@ -48,11 +48,11 @@ cd anki_assist
 
 2. **使用 uv 管理项目**
 ```bash
-# 安装项目依赖（使用 uv 统一管理）
-uv pip install -r requirements.txt
-
-# 或使用 uv 的同步功能
+# 安装项目依赖（推荐）
 uv sync
+
+# 或手动安装依赖
+uv pip install -r requirements.txt
 ```
 
 3. **配置API**
@@ -64,10 +64,13 @@ DEEPSEEK_API_KEY=你的API密钥
 
 4. **启动应用**
 ```bash
-# 使用 uv 运行应用
+# 使用 uv 运行应用（推荐）
 uv run streamlit run app/streamlit_app.py --server.port 8501
 
-# 或直接运行
+# 或激活虚拟环境后运行
+source .venv/bin/activate  # Linux/Mac
+# 或
+.venv\Scripts\activate     # Windows
 streamlit run app/streamlit_app.py --server.port 8501
 ```
 访问：`http://localhost:8501`

@@ -3,9 +3,10 @@ name = "anki-assist"
 version = "0.1.0"
 description = "法律文档 → Anki 闪卡助手"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "streamlit>=1.37.0",
+    "streamlit-tags>=1.2.8",
     "langgraph>=0.2.16",
     "pydantic>=2.8.2",
     "openai>=1.46.0",
@@ -31,11 +32,14 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["anki", "app", "llm", "models", "pipeline"]
+
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39']
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
